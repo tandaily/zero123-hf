@@ -61,7 +61,7 @@ EXAMPLE_DOC_STRING = """
         ```
 """
 
-
+# 就是一个维度变换的mlp 从772到768，可以通过交叉注意力放到diffusion里
 class CCProjection(ModelMixin, ConfigMixin):
     def __init__(self, in_channel=772, out_channel=768):
         super().__init__()
