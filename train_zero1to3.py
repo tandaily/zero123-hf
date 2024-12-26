@@ -466,6 +466,7 @@ def parse_args(input_args=None):
 
     return args
 
+# resize和归一化预处理
 def CLIP_preprocess(x):
     dtype = x.dtype
     if isinstance(x, torch.Tensor):
@@ -478,6 +479,7 @@ def CLIP_preprocess(x):
                                  torch.Tensor([0.26862954, 0.26130258, 0.27577711]))
     return x
 
+# 先预处理图像然后用encoder编码
 def _encode_image(image_encoder, image, device, dtype, do_classifier_free_guidance):
 
     image = image.to(device=device, dtype=dtype)
@@ -489,6 +491,7 @@ def _encode_image(image_encoder, image, device, dtype, do_classifier_free_guidan
     image_embeddings = image_encoder(image).image_embeds.to(dtype=dtype)
     image_embeddings = image_embeddings.unsqueeze(1)
 
+    # 用cfg的话，要把空prompt和图像prompt拼起来 应该是b 1 l c->b 2 l c
     if do_classifier_free_guidance:
         negative_prompt_embeds = torch.zeros_like(image_embeddings)
         image_embeddings = torch.cat([negative_prompt_embeds, image_embeddings])
@@ -497,18 +500,21 @@ def _encode_image(image_encoder, image, device, dtype, do_classifier_free_guidan
 
 def _encode_pose(pose, device, dtype, do_classifier_free_guidance):
     if isinstance(pose, torch.Tensor):
+        # b c->  b 1 c 增加第1维
         pose_embeddings = pose.unsqueeze(1).to(device=device, dtype=dtype)
     else:
         if isinstance(pose[0], list):
             pose = torch.Tensor(pose)
         else:
             pose = torch.Tensor([pose])
+        # B, 1, 4
         x, y, z = pose[:, 0].unsqueeze(1), pose[:, 1].unsqueeze(1), pose[:, 2].unsqueeze(1)
         pose_embeddings = torch.cat([torch.deg2rad(x),
                                      torch.sin(torch.deg2rad(y)),
                                      torch.cos(torch.deg2rad(y)),
                                      z], dim=-1).unsqueeze(1).to(device=device, dtype=dtype)  # B, 1, 4
-
+    
+    # 用cfg的话，要把空prompt和位姿prompt拼起来 应该是 b 1 c->b 2 c
     if do_classifier_free_guidance:
         negative_prompt_embeds = torch.zeros_like(pose_embeddings)
         pose_embeddings = torch.cat([negative_prompt_embeds, pose_embeddings])
@@ -518,6 +524,7 @@ def _encode_pose(pose, device, dtype, do_classifier_free_guidance):
 def _encode_image_with_pose(image_encoder, cc_projection, image, pose, device, dtype, do_classifier_free_guidance):
     img_prompt_embeds = _encode_image(image_encoder, image, device, dtype, False)
     pose_prompt_embeds = _encode_pose(pose, device, dtype, False)
+    # b 2 c1+c2
     prompt_embeds = torch.cat([img_prompt_embeds, pose_prompt_embeds], dim=-1)
     prompt_embeds = cc_projection(prompt_embeds)
     # follow 0123, add negative prompt, after projection
