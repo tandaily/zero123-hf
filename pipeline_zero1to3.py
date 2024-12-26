@@ -537,6 +537,7 @@ class Zero1to3StableDiffusionPipeline(DiffusionPipeline):
             pose_embeddings = torch.cat([negative_prompt_embeds, pose_embeddings])
         return pose_embeddings
 
+    # 编码图像和位姿作为prompt 不用文本
     def _encode_image_with_pose(self, image, pose, device, num_images_per_prompt, do_classifier_free_guidance):
         img_prompt_embeds = self._encode_image(image, device, num_images_per_prompt, False)
         pose_prompt_embeds = self._encode_pose(pose, device, num_images_per_prompt, False)
@@ -606,6 +607,7 @@ class Zero1to3StableDiffusionPipeline(DiffusionPipeline):
                 f" {type(callback_steps)}."
             )
 
+    # 初始latent 随机噪声
     def prepare_latents(self, batch_size, num_channels_latents, height, width, dtype, device, generator, latents=None):
         shape = (batch_size, num_channels_latents, height // self.vae_scale_factor, width // self.vae_scale_factor)
         if isinstance(generator, list) and len(generator) != batch_size:
@@ -623,6 +625,7 @@ class Zero1to3StableDiffusionPipeline(DiffusionPipeline):
         latents = latents * self.scheduler.init_noise_sigma
         return latents
 
+    # 原始图像encode为latent
     def prepare_img_latents(self, image, batch_size, dtype, device, generator=None, do_classifier_free_guidance=False):
         if not isinstance(image, (torch.Tensor, PIL.Image.Image, list)):
             raise ValueError(
@@ -811,6 +814,7 @@ class Zero1to3StableDiffusionPipeline(DiffusionPipeline):
         do_classifier_free_guidance = guidance_scale > 1.0
 
         # 3. Encode input image with pose as prompt
+        # 输入图像同时通过unet输入和prompt注入
         prompt_embeds = self._encode_image_with_pose(prompt_imgs, poses, device, num_images_per_prompt, do_classifier_free_guidance)
 
         # 4. Prepare timesteps
