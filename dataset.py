@@ -26,6 +26,7 @@ class ObjaverseDataLoader():
         self.num_workers = num_workers
         self.total_view = total_view
 
+        # 经过变换，加载的图像首先变成tensor [0,255]->[0,1] 然后归一化到[-1,1]
         image_transforms = [torchvision.transforms.Resize((256, 256)),
                             transforms.ToTensor(),
                             transforms.Normalize([0.5], [0.5])]
